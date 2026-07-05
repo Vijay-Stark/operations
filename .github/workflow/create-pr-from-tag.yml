@@ -3,7 +3,7 @@ name: Create PR from Tag
 on:
   push:
     tags:
-      - '*'  # Triggers the workflow whenever a tag starting with 'v' is pushed (e.g., v1.0.0)
+      - 'v*'  # Triggers when a tag starting with 'v' is pushed
 
 jobs:
   create-pull-request:
@@ -16,21 +16,26 @@ jobs:
       - name: Checkout the repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Fetches all history for the tag to be analyzed
+          fetch-depth: 0
 
       - name: Extract Tag Name
         run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
 
-      - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          branch: "pr-for-${{ env.TAG_NAME }}"
-          base: "main"  # Replace with the branch you want to merge into
-          title: "Automated PR for Tag ${{ env.TAG_NAME }}"
-          body: |
-            ## Description
-            This automated Pull Request was created because the tag **${{ env.TAG_NAME }}** was pushed.
-            Please review the changes associated with this release.
-          labels: "release, automated"
-          draft: false
+      # This creates a unique temporary branch from your tag and pushes it to GitHub
+      - name: Create and Push Temp Branch
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b pr-branch-${{ env.TAG_NAME }}
+          git push origin pr-branch-${{ env.TAG_NAME }} --force
+
+      # Uses GitHub's official command line utility to force open the PR
+      - name: Create Pull Request via GitHub CLI
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr create \
+            --title "Automated PR for Tag ${{ env.TAG_NAME }}" \
+            --body "This automated Pull Request was created because the tag ${{ env.TAG_NAME }} was pushed." \
+            --head "pr-branch-${{ env.TAG_NAME }}" \
+            --base "main"
