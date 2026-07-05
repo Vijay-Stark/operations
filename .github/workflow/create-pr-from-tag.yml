@@ -3,7 +3,7 @@ name: Create PR from Tag
 on:
   push:
     tags:
-      - 'v*'  # Triggers the workflow whenever a tag starting with 'v' is pushed (e.g., v1.0.0)
+      - '*'  # Triggers the workflow whenever a tag starting with 'v' is pushed (e.g., v1.0.0)
 
 jobs:
   create-pull-request:
